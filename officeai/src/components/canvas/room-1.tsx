@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import gridConfigRaw from "../../../data/room-1-grid.json";
 import { RoomGridConfig } from "@/types/tileset";
+import { useSocket } from "@/lib/hooks/useSocket";
+import { useCallback } from "react";
 
 const gridConfig = gridConfigRaw as RoomGridConfig;
 
@@ -11,6 +13,10 @@ export default function Room1() {
   const [bgImageLoaded, setBgImageLoaded] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(false);
+
+  // Socket
+  const { isConnected, globalState, sendPayload } = useSocket('ws://localhost:4000/ws');
+  const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Native dimensions of TXjh2o.png
   const imageWidth = 1254;
@@ -56,6 +62,34 @@ export default function Room1() {
       active = false;
     };
   }, []);
+
+  // Activity Tracker for WebSocket Throttling
+  const notifyActivity = useCallback(() => {
+    sendPayload({ event: 'ROOM_ACTIVE', roomId: 'room-1' });
+    if (idleTimeoutRef.current) {
+      clearTimeout(idleTimeoutRef.current);
+    }
+    idleTimeoutRef.current = setTimeout(() => {
+      sendPayload({ event: 'ROOM_IDLE', roomId: 'room-1' });
+    }, 5000); // 5 seconds of inactivity triggers IDLE
+  }, [sendPayload]);
+
+  useEffect(() => {
+    const handleActivity = () => notifyActivity();
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('click', handleActivity);
+
+    // Initial active notification on load
+    notifyActivity();
+
+    return () => {
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    };
+  }, [notifyActivity]);
 
   // Keyboard controls listener
   useEffect(() => {
@@ -136,17 +170,37 @@ export default function Room1() {
               playerGridXRef.current = nextX;
               playerGridYRef.current = nextY;
               moveCooldown = 12; // cooldown frames between moves
+              
+              // Emit player move to server
+              sendPayload({ 
+                event: 'PLAYER_MOVE', 
+                roomId: 'room-1', 
+                data: { targetX: nextX * tileSize, targetY: nextY * tileSize }
+              });
             }
           }
         }
       }
 
       // Smooth position LERP (Linear Interpolation)
-      const targetVisualX = playerGridXRef.current * tileSize;
-      const targetVisualY = playerGridYRef.current * tileSize;
+      // Check if global state dictates target position (from backend loop) 
+      // or use local grid state
+      let targetVisualX = playerGridXRef.current * tileSize;
+      let targetVisualY = playerGridYRef.current * tileSize;
+      let interpolationSpeed = 0.18;
 
-      playerVisualXRef.current += (targetVisualX - playerVisualXRef.current) * 0.18;
-      playerVisualYRef.current += (targetVisualY - playerVisualYRef.current) * 0.18;
+      if (globalState) {
+        targetVisualX = globalState.targetX;
+        targetVisualY = globalState.targetY;
+        
+        // Slow down animation based on backend Throttle state
+        if (globalState.animationState === 'slow_down') {
+          interpolationSpeed = 0.05; // Sluggish movement to reflect idle throttle
+        }
+      }
+
+      playerVisualXRef.current += (targetVisualX - playerVisualXRef.current) * interpolationSpeed;
+      playerVisualYRef.current += (targetVisualY - playerVisualYRef.current) * interpolationSpeed;
 
       // --- RENDERING ---
       ctx.clearRect(0, 0, imageWidth, imageHeight);
@@ -317,8 +371,14 @@ export default function Room1() {
       {/* Control Panel */}
       <div className="flex items-center justify-between w-full p-4 bg-zinc-950/60 border border-zinc-800 rounded-xl backdrop-blur-md">
         <div>
-          <h3 className="font-bold text-zinc-100 text-lg">Room 1: Office Simulator</h3>
-          <p className="text-cyan-400 text-xs font-mono mt-0.5">Use WASD / Arrow Keys to walk around</p>
+          <h3 className="font-bold text-zinc-100 text-lg flex items-center gap-2">
+            Room 1: Office Simulator
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-red-500'}`} title={isConnected ? 'Connected to WebSocket' : 'Disconnected'} />
+          </h3>
+          <p className="text-cyan-400 text-xs font-mono mt-0.5">
+            Use WASD / Arrow Keys to walk around 
+            {globalState?.animationState === 'slow_down' && ' (THROTTLED: IDLE)'}
+          </p>
         </div>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-xs text-zinc-400 font-medium cursor-pointer hover:text-zinc-200 select-none">

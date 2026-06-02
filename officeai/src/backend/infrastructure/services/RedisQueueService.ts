@@ -8,8 +8,16 @@ export class RedisQueueService implements IQueueService {
   constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     // Use separate instances for pub and sub to avoid connection starvation
-    this.publisher = new Redis(redisUrl);
-    this.subscriber = new Redis(redisUrl);
+    this.publisher = new Redis(redisUrl, { retryStrategy: (times) => Math.min(times * 50, 2000) });
+    this.subscriber = new Redis(redisUrl, { retryStrategy: (times) => Math.min(times * 50, 2000) });
+
+    this.publisher.on('error', (err) => {
+      console.error('[Redis Publisher] Connection Error:', err.message);
+    });
+
+    this.subscriber.on('error', (err) => {
+      console.error('[Redis Subscriber] Connection Error:', err.message);
+    });
   }
 
   async publish(channel: string, message: any): Promise<void> {
