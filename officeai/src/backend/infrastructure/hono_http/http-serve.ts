@@ -16,7 +16,10 @@ const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 const roomDebateUseCase = container.resolve('roomDebateUseCase');
 const queueService = container.resolve('queueService');
 
-const wsController = new WebSocketController(roomDebateUseCase, queueService);
+import { WebSocketStateService } from './services/WebSocketStateService';
+const stateService = new WebSocketStateService();
+
+const wsController = new WebSocketController(roomDebateUseCase, queueService, stateService);
 
 // Health check route
 app.get('/health', (c) => c.json({ status: 'ok', service: 'officeai-backend' }));
