@@ -1,0 +1,222 @@
+{
+  "sheets": {
+    "structures": {
+      "src": "/assets/tileset-wall-floor-door-windows.png"
+    },
+    "furniture": {
+      "src": "/assets/tileset-chair-table.png"
+    },
+    "cyber_furniture": {
+      "src": "/assets/tileset-chair-table-cyber-theme.png"
+    }
+  },
+  "tiles": {
+    "floor_wood": {
+      "sheet": "structures",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "floor_carpet_blue": {
+      "sheet": "structures",
+      "x": 384,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "floor_carpet_gray": {
+      "sheet": "structures",
+      "x": 640,
+      "y": 192,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_corner_top_left": {
+      "sheet": "structures",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_horizontal_top": {
+      "sheet": "structures",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_corner_top_right": {
+      "sheet": "structures",
+      "x": 256,
+      "y": 0,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_vertical_left": {
+      "sheet": "structures",
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_vertical_right": {
+      "sheet": "structures",
+      "x": 256,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_corner_bottom_left": {
+      "sheet": "structures",
+      "x": 0,
+      "y": 256,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_horizontal_bottom": {
+      "sheet": "structures",
+      "x": 64,
+      "y": 256,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_corner_bottom_right": {
+      "sheet": "structures",
+      "x": 256,
+      "y": 256,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "wall_pillar": {
+      "sheet": "structures",
+      "x": 320,
+      "y": 0,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "door_red": {
+      "sheet": "structures",
+      "x": 320,
+      "y": 640,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "window_glass": {
+      "sheet": "structures",
+      "x": 704,
+      "y": 832,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "desk_wood_left": {
+      "sheet": "furniture",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "desk_wood_middle": {
+      "sheet": "furniture",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "desk_wood_right": {
+      "sheet": "furniture",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "chair_dark": {
+      "sheet": "furniture",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "desk_cyber_left": {
+      "sheet": "cyber_furniture",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "desk_cyber_middle": {
+      "sheet": "cyber_furniture",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "desk_cyber_right": {
+      "sheet": "cyber_furniture",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "chair_cyber": {
+      "sheet": "cyber_furniture",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "plant_potted": {
+      "sheet": "furniture",
+      "x": 896,
+      "y": 832,
+      "w": 64,
+      "h": 64,
+      "offsetX": 0,
+      "offsetY": 0
+    }
+  }
+}
