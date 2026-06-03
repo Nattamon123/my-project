@@ -5,17 +5,24 @@ import gridConfigRaw from "../../../data/room-1-grid.json";
 import { RoomGridConfig } from "@/types/tileset";
 import { useSocket } from "@/lib/hooks/useSocket";
 import { useCallback } from "react";
+import characterAsset from "../../../data/character-asset.json";
 
 const gridConfig = gridConfigRaw as RoomGridConfig;
 
 export default function Room1() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [bgImageLoaded, setBgImageLoaded] = useState(false);
+  const [charImagesLoaded, setCharImagesLoaded] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(false);
 
   // Socket
-  const { isConnected, globalState, sendPayload } = useSocket('ws://localhost:4000/ws');
+  const botSpeechRef = useRef<{ text: string; expiresAt: number } | null>(null);
+  const handleAgentMessage = useCallback((data: any) => {
+    const text = typeof data === 'string' ? data : data.message || JSON.stringify(data);
+    botSpeechRef.current = { text, expiresAt: Date.now() + 3000 };
+  }, []);
+  const { isConnected, globalState, sendPayload } = useSocket('ws://localhost:4000/ws', handleAgentMessage);
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Native dimensions of TXjh2o.png
@@ -33,6 +40,10 @@ export default function Room1() {
 
   // Background image ref
   const bgImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Character images ref (Animated Array)
+  const charImagesRef = useRef<Record<string, HTMLImageElement[]>>({});
+  const playerDirectionRef = useRef<string>("front");
 
   // Hover detection ref
   const isHoveringWhiteboardRef = useRef<boolean>(false);
@@ -58,6 +69,33 @@ export default function Room1() {
       setLoadingError("Failed to load background image: /assets/TXjh2o.png");
     };
 
+    // Load character images from characterAsset.directions
+    let totalImages = 0;
+    let loadedCount = 0;
+    
+    Object.values(characterAsset.directions).forEach((arr) => {
+      totalImages += arr.length;
+    });
+
+    Object.entries(characterAsset.directions).forEach(([dir, paths]) => {
+      charImagesRef.current[dir] = [];
+      paths.forEach((path, index) => {
+        const charImg = new Image();
+        charImg.src = path;
+        charImg.onload = () => {
+          if (!active) return;
+          charImagesRef.current[dir][index] = charImg;
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            setCharImagesLoaded(true);
+          }
+        };
+        charImg.onerror = () => {
+          if (!active) return;
+          setLoadingError(`Failed to load character image: ${path}`);
+        };
+      });
+    });
     return () => {
       active = false;
     };
@@ -95,7 +133,7 @@ export default function Room1() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      
+
       // Prevent browser scrolling with arrow keys / space
       if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key)) {
         e.preventDefault();
@@ -122,7 +160,7 @@ export default function Room1() {
 
   // Main Canvas Render & Game loop
   useEffect(() => {
-    if (!bgImageLoaded) return;
+    if (!bgImageLoaded || !charImagesLoaded) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -170,11 +208,11 @@ export default function Room1() {
               playerGridXRef.current = nextX;
               playerGridYRef.current = nextY;
               moveCooldown = 12; // cooldown frames between moves
-              
+
               // Emit player move to server
-              sendPayload({ 
-                event: 'PLAYER_MOVE', 
-                roomId: 'room-1', 
+              sendPayload({
+                event: 'PLAYER_MOVE',
+                roomId: 'room-1',
                 data: { targetX: nextX * tileSize, targetY: nextY * tileSize }
               });
             }
@@ -192,15 +230,26 @@ export default function Room1() {
       if (globalState) {
         targetVisualX = globalState.targetX;
         targetVisualY = globalState.targetY;
-        
+
         // Slow down animation based on backend Throttle state
         if (globalState.animationState === 'slow_down') {
           interpolationSpeed = 0.05; // Sluggish movement to reflect idle throttle
         }
       }
 
-      playerVisualXRef.current += (targetVisualX - playerVisualXRef.current) * interpolationSpeed;
-      playerVisualYRef.current += (targetVisualY - playerVisualYRef.current) * interpolationSpeed;
+      // Determine direction based on movement
+      const vx = targetVisualX - playerVisualXRef.current;
+      const vy = targetVisualY - playerVisualYRef.current;
+      if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) {
+        if (Math.abs(vx) > Math.abs(vy)) {
+          playerDirectionRef.current = vx > 0 ? "right" : "left";
+        } else {
+          playerDirectionRef.current = vy > 0 ? "front" : "back";
+        }
+      }
+
+      playerVisualXRef.current += vx * interpolationSpeed;
+      playerVisualYRef.current += vy * interpolationSpeed;
 
       // --- RENDERING ---
       ctx.clearRect(0, 0, imageWidth, imageHeight);
@@ -216,7 +265,7 @@ export default function Room1() {
           for (let c = 0; c < gridConfig.cols; c++) {
             const x = c * tileSize;
             const y = r * tileSize;
-            
+
             // Draw grid outline
             ctx.strokeStyle = "rgba(255, 0, 0, 0.15)";
             ctx.lineWidth = 1;
@@ -245,66 +294,81 @@ export default function Room1() {
       // Draw custom player avatar (floating retro office bot)
       const px = playerVisualXRef.current + tileSize / 2;
       const py = playerVisualYRef.current + tileSize / 2;
-      const floatOffset = Math.sin(animFrameCountRef.current * 0.08) * 4;
+      // ลดการขยับให้ดูสมจริงขึ้น (ช้าลงและขยับน้อยลง)
+      const floatOffset = Math.sin(animFrameCountRef.current * 0.05) * 1.5;
 
       // 1. Draw avatar shadow
       ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
       ctx.beginPath();
-      ctx.ellipse(px, py + 22, 14, 5, 0, 0, Math.PI * 2);
+      // เลื่อนเงาลงไปใกล้ขอบล่างของ Tile ให้ดูติดพื้นมากขึ้น
+      ctx.ellipse(px, py + 28, 14, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Draw robot body
-      const botY = py + floatOffset;
-
-      // Glowing aura
-      const aura = ctx.createRadialGradient(px, botY, 5, px, botY, 25);
-      aura.addColorStop(0, "rgba(6, 182, 212, 0.4)");
-      aura.addColorStop(1, "rgba(6, 182, 212, 0)");
-      ctx.fillStyle = aura;
-      ctx.beginPath();
-      ctx.arc(px, botY, 25, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core body (rounded cube)
-      ctx.fillStyle = "#1e293b"; // Slate-800
-      ctx.strokeStyle = "#0891b2"; // Cyan-600
-      ctx.lineWidth = 3;
+      // 2. Draw character sprite
+      const dir = playerDirectionRef.current;
+      const frames = charImagesRef.current[dir] || charImagesRef.current["front"];
       
-      ctx.beginPath();
-      ctx.roundRect(px - 16, botY - 20, 32, 36, 8);
-      ctx.fill();
-      ctx.stroke();
+      if (frames && frames.length > 0) {
+        const isMoving = Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1;
+        let frameIndex = 0;
+        if (isMoving) {
+          // สลับเฟรมทุกๆ 8 render loops
+          frameIndex = Math.floor(animFrameCountRef.current / 8) % frames.length;
+        } else {
+          // เมื่อหยุดเดิน ให้ใช้เฟรมแรกเป็น Idle
+          frameIndex = 0;
+        }
 
-      // Face display screen
-      ctx.fillStyle = "#0f172a"; // Slate-900
-      ctx.beginPath();
-      ctx.roundRect(px - 11, botY - 14, 22, 16, 4);
-      ctx.fill();
+        const charImg = frames[frameIndex];
+        if (charImg) {
+          const scale = 0.6;
+          const charW = characterAsset.width * scale;
+          const charH = characterAsset.height * scale;
+          const feetY = py + 28 + floatOffset;
+          const drawX = px - charW / 2;
+          const charYOffset = 45;
+          const drawY = feetY - charH + charYOffset;
 
-      // Eyes (glowing cyan orbs)
-      ctx.fillStyle = "#22d3ee"; // Cyan-400
-      ctx.shadowColor = "#22d3ee";
-      ctx.shadowBlur = 4;
-      ctx.beginPath();
-      ctx.arc(px - 5, botY - 6, 2.5, 0, Math.PI * 2);
-      ctx.arc(px + 5, botY - 6, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Reset shadows
-      ctx.shadowBlur = 0;
+          ctx.drawImage(charImg, drawX, drawY, charW, charH);
+        }
+      }
 
-      // Antenna
-      ctx.strokeStyle = "#0891b2";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(px, botY - 20);
-      ctx.lineTo(px, botY - 28);
-      ctx.stroke();
+      // 3. Draw Speech Bubble if active
+      const speech = botSpeechRef.current;
+      if (speech && Date.now() < speech.expiresAt) {
+        const text = speech.text;
+        ctx.font = "bold 12px sans-serif";
+        const textMetrics = ctx.measureText(text);
+        const padding = 10;
+        const bubbleW = textMetrics.width + padding * 2;
+        const bubbleH = 28;
 
-      ctx.fillStyle = "#22d3ee";
-      ctx.beginPath();
-      ctx.arc(px, botY - 29, 2.5, 0, Math.PI * 2);
-      ctx.fill();
+        const bubbleX = px - bubbleW / 2;
+        // Adjust bubble Y so it rests nicely above the scaled character's head
+        const bubbleY = py + floatOffset - 75;
+
+        // Bubble background
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Bubble pointer
+        ctx.beginPath();
+        ctx.moveTo(px - 6, bubbleY + bubbleH);
+        ctx.lineTo(px + 6, bubbleY + bubbleH);
+        ctx.lineTo(px, bubbleY + bubbleH + 6);
+        ctx.fill();
+
+        // Bubble text
+        ctx.fillStyle = "#0f172a";
+        ctx.fillText(text, bubbleX + padding, bubbleY + 18);
+      } else if (speech && Date.now() >= speech.expiresAt) {
+        botSpeechRef.current = null;
+      }
 
       animationFrameId = requestAnimationFrame(gameLoop);
     };
@@ -314,7 +378,7 @@ export default function Room1() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [bgImageLoaded, showGrid]);
+  }, [bgImageLoaded, charImagesLoaded, showGrid]);
 
   // Handle canvas clicks & mouse movement for interactive TodoList board
   const getMouseCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -376,7 +440,7 @@ export default function Room1() {
             <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-red-500'}`} title={isConnected ? 'Connected to WebSocket' : 'Disconnected'} />
           </h3>
           <p className="text-cyan-400 text-xs font-mono mt-0.5">
-            Use WASD / Arrow Keys to walk around 
+            Use WASD / Arrow Keys to walk around
             {globalState?.animationState === 'slow_down' && ' (THROTTLED: IDLE)'}
           </p>
         </div>
@@ -401,7 +465,7 @@ export default function Room1() {
           </div>
         )}
 
-        {!bgImageLoaded && !loadingError && (
+        {(!bgImageLoaded || !charImagesLoaded) && !loadingError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 gap-3 z-10">
             <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin"></div>
             <p className="text-zinc-400 text-xs font-mono">Loading simulator...</p>

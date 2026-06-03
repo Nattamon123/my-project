@@ -1,0 +1,31 @@
+{
+  "character": "idle_char1",
+  "width": 256,
+  "height": 256,
+  "directions": {
+    "front": [
+      "/assets/characters/idle_char1/idle_front/item_7.png",
+      "/assets/characters/idle_char1/idle_front/item_8.png",
+      "/assets/characters/idle_char1/idle_front/item_9.png",
+      "/assets/characters/idle_char1/idle_front/item_10.png"
+    ],
+    "back": [
+      "/assets/characters/idle_char1/idle_back/item_15.png",
+      "/assets/characters/idle_char1/idle_back/item_16.png",
+      "/assets/characters/idle_char1/idle_back/item_17.png",
+      "/assets/characters/idle_char1/idle_back/item_18.png"
+    ],
+    "left": [
+      "/assets/characters/idle_char1/idle_right/item_11.png",
+      "/assets/characters/idle_char1/idle_right/item_12.png",
+      "/assets/characters/idle_char1/idle_right/item_13.png",
+      "/assets/characters/idle_char1/idle_right/item_14.png"
+    ],
+    "right": [
+      "/assets/characters/idle_char1/idle_left/item_19.png",
+      "/assets/characters/idle_char1/idle_left/item_20.png",
+      "/assets/characters/idle_char1/idle_left/item_21.png",
+      "/assets/characters/idle_char1/idle_left/item_22.png"
+    ]
+  }
+}

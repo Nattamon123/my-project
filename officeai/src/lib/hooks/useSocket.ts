@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { GlobalRoomState, WsClientPayload, WsServerPayload } from '../../types/websocket';
 
-export function useSocket(url: string) {
+export function useSocket(url: string, onAgentMessage?: (data: any) => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [globalState, setGlobalState] = useState<GlobalRoomState | null>(null);
   
+  const onAgentMessageRef = useRef(onAgentMessage);
+  useEffect(() => {
+    onAgentMessageRef.current = onAgentMessage;
+  }, [onAgentMessage]);
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -28,6 +33,9 @@ export function useSocket(url: string) {
           setGlobalState(payload.data);
         } else if (payload.event === 'AGENT_MESSAGE') {
           console.log('[useSocket] Agent Message:', payload.data);
+          if (onAgentMessageRef.current) {
+            onAgentMessageRef.current(payload.data);
+          }
         }
       } catch (err) {
         console.error('[useSocket] Error parsing message', err);
